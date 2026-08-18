@@ -90,7 +90,9 @@ control 'disfarce-04' do
     its('stdout') { should match(/Verify return code: 0 \(ok\)/) }
   end
 
-  describe host(dominio, port: 443, protocol: 'tcp') do
-    it { should be_reachable }
-  end
+  # O recurso `host` foi removido daqui: ele nao roda no transporte local do
+  # container e ficava eternamente SKIPPED — e controle pulado faz o InSpec sair
+  # com 101, que derrubava o resto do fluxo. Alem disso era redundante: o
+  # s_client acima ja prova que a borda da Cloudflare aceita conexao e termina
+  # TLS pelo nosso dominio, que e mais forte do que "a porta responde".
 end

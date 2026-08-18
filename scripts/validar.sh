@@ -21,6 +21,23 @@ chmod 600 "$TMP/chave_ssh"
 
 falhou=0
 
+# ⚠️ O InSpec NAO usa 0/1. Ele sai com:
+#   0   tudo passou
+#   100 houve teste reprovado        -> falha de verdade
+#   101 houve controle PULADO        -> aviso, nao falha
+#
+# Tratar todo codigo != 0 como erro fazia um unico controle pulado derrubar o
+# fluxo inteiro — e o `make up` terminava sem gerar as configuracoes de cliente,
+# que sao o produto final. Passava a impressao de que a validacao reprovou,
+# quando 26 de 26 testes tinham passado.
+avaliar_saida_do_inspec() {
+  case "$1" in
+    0)   ;;
+    101) aviso "  (houve controle pulado — nao e reprovacao)" ;;
+    *)   falhou=1 ;;
+  esac
+}
+
 # ⚠️ --no-create-lockfile: o repositorio e montado somente-leitura de proposito
 # (o validador nao tem por que escrever no que ele valida), e sem esta flag o
 # InSpec tenta gravar inspec.lock e morre com um backtrace de Ruby de 20 linhas
@@ -31,7 +48,7 @@ docker run --rm \
   "$IMAGEM_INSPEC" exec /repo/inspec/servidor \
     -t "ssh://ec2-user@$IP" -i /segredos/chave_ssh --sudo \
     --chef-license accept-silent --no-create-lockfile \
-  || falhou=1
+  || avaliar_saida_do_inspec $?
 
 echo
 echo "==> InSpec: o disfarce visto de fora"
@@ -40,7 +57,7 @@ docker run --rm \
   "$IMAGEM_INSPEC" exec /repo/inspec/disfarce \
     --input ip="$IP" dominio="$DOMINIO" decoy="$DECOY" \
     --chef-license accept-silent --no-create-lockfile \
-  || falhou=1
+  || avaliar_saida_do_inspec $?
 
 # ⚠️ A falha do Tailscale e SILENCIOSA: o tunel funciona, so a tailnet nao. Sem
 # esta checagem, ela so apareceria quando ele tentasse alcancar outro aparelho —
