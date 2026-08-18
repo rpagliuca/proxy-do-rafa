@@ -10,7 +10,7 @@ SHELL := /bin/bash
 REGIAO ?= sa-east-1
 export REGIAO
 
-.PHONY: ajuda bootstrap segredos-iniciais segredos up down config check verify qr status orfaos fmt lint
+.PHONY: ajuda bootstrap segredos-iniciais segredos up down config check verify testar-tunel qr status orfaos fmt lint
 
 ajuda:  ## mostra esta ajuda
 	@echo "proxy-do-rafa — saida privada efemera"
@@ -44,6 +44,9 @@ check:  ## simula a configuracao sem aplicar (ansible --check --diff)
 
 verify:  ## roda o InSpec: estado do servidor + disfarce visto de fora
 	@scripts/validar.sh
+
+testar-tunel:  ## manda trafego de verdade por cada caminho e confere de onde ele sai
+	@scripts/testar-tunel.sh
 
 qr:  ## regenera as configs de cliente e imprime o QR
 	@scripts/gerar-clientes.sh

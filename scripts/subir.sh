@@ -40,6 +40,8 @@ verde "maquina no ar: $IP"
 "$RAIZ/scripts/configurar.sh"
 "$RAIZ/scripts/validar.sh"
 "$RAIZ/scripts/gerar-clientes.sh"
+# Por ultimo, e obrigatorio: nenhuma checagem de estado prova travessia.
+"$RAIZ/scripts/testar-tunel.sh"
 
 echo
 verde "pronto. configs de cliente em clientes/gerado/"

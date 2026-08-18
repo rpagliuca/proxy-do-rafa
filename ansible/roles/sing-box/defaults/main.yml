@@ -10,11 +10,31 @@ singbox_diretorio: /etc/sing-box
 
 # Site cuja identidade TLS o REALITY veste.
 #
-# Requisitos reais: TLS 1.3, HTTP/2, e — o que mais importa — ser um destino que
-# a rede fechada JA permite. Um decoy bloqueado transforma o disfarce em alvo.
-# www.microsoft.com passa em praticamente toda rede corporativa, porque bloquear
-# a Microsoft quebra o Windows e o Office da propria empresa.
-singbox_decoy: "www.microsoft.com"
+# ⚠️ NAO TROQUE SEM RODAR `make testar-tunel`.
+#
+# Suportar TLS 1.3 e HTTP/2 NAO BASTA. Medido em 2026-08-18, com o mesmo
+# binario dos dois lados:
+#
+#   www.microsoft.com   -> REALITY: processed invalid connection   (NAO funciona)
+#   www.apple.com       -> OK
+#   dl.google.com       -> OK
+#   addons.mozilla.org  -> OK
+#   www.cloudflare.com  -> OK
+#
+# E os dois primeiros negociam TLS 1.3 com X25519 e anunciam h2 — conferido. O
+# que separa um do outro esta em como a borda daquele host responde ao handshake
+# que o servidor relaya, e nao da para deduzir da capacidade anunciada. So
+# medindo.
+#
+# Por que isso passou despercebido: com o decoy errado, a autenticacao falha e o
+# servidor faz exatamente o que deveria fazer com uma sonda — repassa para o site
+# real. O controle `disfarce-01` PASSA, porque o disfarce esta perfeito. O que
+# nao funciona e o tunel. Por isso existe `make testar-tunel`.
+#
+# O outro criterio, alem de funcionar: ser um destino que a rede fechada JA
+# permite. Um decoy bloqueado transforma o disfarce em alvo. www.apple.com passa
+# em praticamente toda rede corporativa.
+singbox_decoy: "www.apple.com"
 
 # Tag do no na tailnet. E a tag, e nao o nome, que as ACLs devem referenciar:
 # a maquina e efemera e o nome ganha sufixo (proxy-do-rafa-1, -2) enquanto o no
