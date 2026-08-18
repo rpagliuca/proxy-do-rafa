@@ -72,6 +72,41 @@
   no_log: true
   notify: Reiniciar sing-box
 
+# ⚠️ A auth key e cunhada nova a cada `make up`. Se ela entrasse direto no
+# template, o arquivo mudaria em TODA execucao, o handler dispararia, e o
+# sing-box reiniciaria — derrubando quem estivesse usando o tunel naquele
+# momento. Numa ferramenta de viagem, isso significa "reaplicar a configuracao
+# te desconecta", e tambem torna a idempotencia impossivel de verificar:
+# `changed=2` para sempre, escondendo qualquer mudanca real no meio do ruido.
+#
+# A key so importa na PRIMEIRA autenticacao: depois disso o tsnet guarda o
+# estado do no em /var/lib/sing-box e nunca mais olha para ela. Entao, se ja
+# existe configuracao nesta maquina, reaproveita-se a que esta la — mesmo
+# expirada, porque ela nao sera usada de novo.
+- name: Existe configuracao anterior nesta maquina?
+  ansible.builtin.stat:
+    path: "{{ singbox_diretorio }}/config.json"
+  register: config_anterior
+
+- name: Ler a configuracao que ja esta em uso
+  ansible.builtin.slurp:
+    src: "{{ singbox_diretorio }}/config.json"
+  register: config_em_uso
+  when: config_anterior.stat.exists
+  no_log: true
+
+- name: Reaproveitar a auth key ja autenticada
+  ansible.builtin.set_fact:
+    tailscale_authkey_efetiva: "{{ (config_em_uso.content | b64decode | from_json).endpoints[0].auth_key }}"
+  when: config_anterior.stat.exists
+  no_log: true
+
+- name: Usar a auth key recem-cunhada na primeira configuracao
+  ansible.builtin.set_fact:
+    tailscale_authkey_efetiva: "{{ tailscale_authkey }}"
+  when: not config_anterior.stat.exists
+  no_log: true
+
 # `validate` roda `sing-box check` no arquivo NOVO antes de ele substituir o que
 # esta em uso. Sem isso, uma virgula errada no template derruba o servico e a
 # unica pista fica no journal de uma maquina que talvez ja nao seja alcancavel
