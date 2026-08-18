@@ -1,0 +1,15 @@
+# Nada de state local: o state vive no S3, encriptado. Se um destes aparecer
+# aqui, alguem rodou tofu sem o backend — investigar antes de apagar.
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Saidas de trabalho, regeneraveis a partir do state + segredos.
+.local/
+clientes/gerado/
+
+# A chave mestra NUNCA entra no repositorio. Ela vive em
+# ~/.config/proxy-do-rafa/age.key e no pass (proxy-do-rafa/age-key).
+*.age.key
+age.key

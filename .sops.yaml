@@ -1,0 +1,18 @@
+# Uma unica chave mestra: a chave privada age.
+#
+# A publica fica aqui, em claro, de proposito — ela e publica. A privada vive em
+# ~/.config/proxy-do-rafa/age.key e no `pass` (proxy-do-rafa/age-key), e NUNCA no
+# repositorio.
+#
+# Sem `encrypted_regex`: o padrao do sops cifra TODOS os valores e deixa TODAS as
+# chaves legiveis, que e exatamente o que se quer — o diff do git mostra O QUE
+# mudou sem revelar o valor.
+#
+# ⚠️ NAO acrescente `encrypted_regex` com lookahead (`(?!...)`). A engine de
+# regex do Go e RE2 e nao tem lookahead: o sops aceita o padrao, nao casa com
+# nada, grava o arquivo INTEIRO EM CLARO e sai com codigo 0. Aconteceu aqui em
+# 2026-08-18, e so foi percebido porque scripts/gerar-segredos-iniciais.sh
+# confere o resultado depois de cifrar.
+creation_rules:
+  - path_regex: secrets/.*\.sops\.yaml$
+    age: age1dtwz8ky7wffs28eqhxnp8ptkssrt9lstsa8y75ffe0u9est08qssu9l790

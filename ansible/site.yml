@@ -1,0 +1,23 @@
+---
+- name: Saida privada efemera
+  hosts: proxy
+  become: true
+  remote_user: ec2-user
+  gather_facts: true
+
+  pre_tasks:
+    - name: Esperar a maquina aceitar SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+        sleep: 5
+
+    # Sem isto, a primeira execucao depois de `make up` corre o risco de
+    # disputar o dnf com o cloud-init e falhar com "lock ja em uso" — falha que
+    # se le como problema de rede e manda investigar o lugar errado.
+    - name: Esperar o cloud-init terminar
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+
+  roles:
+    - base
+    - sing-box

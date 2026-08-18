@@ -1,0 +1,29 @@
+---
+# So modulos do ansible-core, de proposito: sem `ansible.posix`, sem
+# `community.general`. Uma colecao a mais e uma versao a mais para fixar, e o
+# unico jeito honesto de fixar colecao e travar versao E conferir hash — custo
+# que nao se paga para escrever quatro linhas em /etc/sysctl.d.
+- name: Ajustes de rede do kernel
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/90-proxy-do-rafa.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # QUIC/Hysteria2 vive de UDP em rajada. Com o buffer padrao do kernel
+      # (~208 KiB) o proprio sing-box registra "failed to sufficiently increase
+      # receive buffer size" e a vazao fica muito abaixo do enlace.
+      net.core.rmem_max = 16777216
+      net.core.wmem_max = 16777216
+
+      # BBR. Esta maquina transporta bytes por caminhos longos e com perda; o
+      # cubic (padrao) le perda como congestionamento e recua, enquanto o BBR
+      # mede a banda de fato. E a mesma fisica que faz um backup intercontinental
+      # render 8x menos que um nacional.
+      net.core.default_qdisc = fq
+      net.ipv4.tcp_congestion_control = bbr
+  notify: Recarregar sysctl
+
+- name: Fuso horario em UTC
+  ansible.builtin.command: timedatectl set-timezone UTC
+  changed_when: false

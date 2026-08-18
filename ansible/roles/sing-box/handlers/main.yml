@@ -1,0 +1,9 @@
+---
+- name: Recarregar systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Reiniciar sing-box
+  ansible.builtin.systemd_service:
+    name: sing-box
+    state: restarted

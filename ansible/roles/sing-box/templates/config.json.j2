@@ -1,0 +1,91 @@
+{
+  "log": { "level": "warn", "timestamp": true },
+
+  "dns": {
+    "servers": [
+      { "type": "tailscale", "tag": "dns-tailnet", "endpoint": "tailnet" },
+      { "type": "udp", "tag": "dns-publico", "server": "1.1.1.1" }
+    ],
+    "rules": [
+      { "ip_accept_any": true, "server": "dns-publico" }
+    ],
+    "final": "dns-publico"
+  },
+
+  "endpoints": [
+    {
+      "type": "tailscale",
+      "tag": "tailnet",
+      "auth_key": {{ tailscale_authkey | to_json }},
+      "hostname": "proxy-do-rafa",
+      "accept_routes": true,
+      "exit_node_allow_lan_access": true
+    }
+  ],
+
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-reality",
+      "listen": "::",
+      "listen_port": 443,
+      "users": [
+        { "name": "rafael", "uuid": {{ vless_uuid | to_json }}, "flow": "xtls-rprx-vision" }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": {{ singbox_decoy | to_json }},
+        "reality": {
+          "enabled": true,
+          "handshake": { "server": {{ singbox_decoy | to_json }}, "server_port": 443 },
+          "private_key": {{ reality_private_key | to_json }},
+          "short_id": [ {{ reality_short_id | to_json }} ]
+        }
+      }
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2",
+      "listen": "::",
+      "listen_port": 443,
+      "users": [
+        { "name": "rafael", "password": {{ hysteria2_password | to_json }} }
+      ],
+      "tls": {
+        "enabled": true,
+        "alpn": [ "h3" ],
+        "certificate_path": "{{ singbox_diretorio }}/tls/cert.pem",
+        "key_path": "{{ singbox_diretorio }}/tls/key.pem"
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "vless-websocket",
+      "listen": "::",
+      "listen_port": {{ porta_origem_websocket }},
+      "users": [
+        { "name": "rafael", "uuid": {{ vless_uuid | to_json }} }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": {{ dominio | to_json }},
+        "certificate_path": "{{ singbox_diretorio }}/tls/cert.pem",
+        "key_path": "{{ singbox_diretorio }}/tls/key.pem"
+      },
+      "transport": { "type": "ws", "path": {{ ws_path | to_json }} }
+    }
+  ],
+
+  "outbounds": [
+    { "type": "direct", "tag": "internet" }
+  ],
+
+  "route": {
+    "rules": [
+      { "ip_cidr": [ "100.64.0.0/10" ], "outbound": "tailnet" },
+      { "domain_suffix": [ ".ts.net" ], "outbound": "tailnet" }
+    ],
+    "final": "internet",
+    "default_domain_resolver": { "server": "dns-publico" }
+  }
+}

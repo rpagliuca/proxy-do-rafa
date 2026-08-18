@@ -1,0 +1,58 @@
+name: lint
+
+# Roda a cada push e PR. Nao toca a AWS nem a Cloudflare: so o que da para
+# checar sem credencial.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verificacoes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ⚠️ O controle mais importante deste arquivo.
+      #
+      # Este repositorio e PUBLICO e guarda segredos cifrados. Um segredo que
+      # chegue aqui em claro esta publicado no instante do push, e nao ha
+      # revogacao possivel depois — historico de git nao esquece.
+      #
+      # Ja aconteceu: um `--encrypted-regex` com lookahead (que a engine RE2 do
+      # Go nao suporta) fez o sops gravar o arquivo INTEIRO EM CLARO e sair com
+      # codigo 0. Foi pego antes do primeiro push; este passo e a rede para a
+      # proxima vez.
+      - name: Nenhum segredo em claro
+        run: |
+          set -euo pipefail
+          for arquivo in secrets/*.sops.yaml; do
+            chaves=$(grep -cE '^[a-z0-9_]+:' "$arquivo")
+            cifrados=$(grep -cE '^[a-z0-9_]+: ENC\[AES256_GCM' "$arquivo" || true)
+            echo "$arquivo: $cifrados de $chaves valores cifrados"
+            [[ "$chaves" -eq "$cifrados" ]] || { echo "::error::valor em claro em $arquivo"; exit 1; }
+          done
+          if grep -rE 'BEGIN (EC |RSA |OPENSSH )?PRIVATE KEY' --include='*' . ; then
+            echo "::error::chave privada em claro no repositorio"; exit 1
+          fi
+
+      - name: Sintaxe dos scripts
+        run: for f in scripts/*.sh; do bash -n "$f"; done
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.12.3
+
+      - name: Formatacao do OpenTofu
+        run: tofu fmt -check -recursive -diff
+
+      - name: Validacao do OpenTofu
+        run: |
+          tofu -chdir=tofu init -backend=false -input=false
+          TF_VAR_state_passphrase=x TF_VAR_ssh_public_key=x TF_VAR_cloudflare_zone_id=x \
+            tofu -chdir=tofu validate
+
+      - name: Sintaxe do playbook
+        run: |
+          pip install --quiet ansible-core==2.21.2
+          ansible-playbook --syntax-check -i localhost, ansible/site.yml

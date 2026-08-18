@@ -1,0 +1,15 @@
+name: proxy-do-rafa-servidor
+title: Estado do servidor depois do Ansible
+maintainer: Rafael Pagliuca dos Santos
+license: MIT
+summary: Confere na maquina o que o playbook prometeu deixar la.
+version: 1.0.0
+supports:
+  - platform: os
+inputs:
+  - name: versao_singbox
+    type: string
+    value: "1.13.19"
+  - name: porta_websocket
+    type: numeric
+    value: 8443

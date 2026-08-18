@@ -1,0 +1,17 @@
+---
+# Versao e hash fixados: o binario que roda no servidor tem que ser o mesmo que
+# o `sing-box check` validou aqui. Sem o hash, "1.13.19" e uma promessa do
+# servidor de downloads, nao um fato.
+singbox_versao: "1.13.19"
+singbox_sha256_arm64: "7fe3597a95a3c5ad67477b1d7653b9ce097e0be7c676758eba1fcf558f353d57"
+
+singbox_usuario: sing-box
+singbox_diretorio: /etc/sing-box
+
+# Site cuja identidade TLS o REALITY veste.
+#
+# Requisitos reais: TLS 1.3, HTTP/2, e — o que mais importa — ser um destino que
+# a rede fechada JA permite. Um decoy bloqueado transforma o disfarce em alvo.
+# www.microsoft.com passa em praticamente toda rede corporativa, porque bloquear
+# a Microsoft quebra o Windows e o Office da propria empresa.
+singbox_decoy: "www.microsoft.com"

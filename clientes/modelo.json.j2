@@ -1,0 +1,92 @@
+{
+  "log": { "level": "info", "timestamp": true },
+
+  "dns": {
+    "servers": [
+      { "type": "udp", "tag": "dns-remoto", "server": "1.1.1.1", "detour": "saida" },
+      { "type": "local", "tag": "dns-local" }
+    ],
+    "rules": [
+      { "clash_mode": "Direct", "server": "dns-local" }
+    ],
+    "final": "dns-remoto",
+    "strategy": "ipv4_only"
+  },
+
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "address": [ "172.19.0.1/30", "fdfe:dcba:9876::1/126" ],
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "mixed"
+    }
+  ],
+
+  "outbounds": [
+    {
+      "type": "selector",
+      "tag": "saida",
+      "outbounds": [ "reality", "hysteria2", "websocket" ],
+      "default": "reality"
+    },
+    {
+      "type": "vless",
+      "tag": "reality",
+      "server": {{ ip | to_json }},
+      "server_port": 443,
+      "uuid": {{ vless_uuid | to_json }},
+      "flow": "xtls-rprx-vision",
+      "tls": {
+        "enabled": true,
+        "server_name": {{ decoy | to_json }},
+        "utls": { "enabled": true, "fingerprint": "chrome" },
+        "reality": {
+          "enabled": true,
+          "public_key": {{ reality_public_key | to_json }},
+          "short_id": {{ reality_short_id | to_json }}
+        }
+      }
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2",
+      "server": {{ ip | to_json }},
+      "server_port": 443,
+      "password": {{ hysteria2_password | to_json }},
+      "tls": {
+        "enabled": true,
+        "server_name": {{ dominio | to_json }},
+        "alpn": [ "h3" ],
+        "certificate": {{ certificado | to_json }}
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "websocket",
+      "server": {{ dominio | to_json }},
+      "server_port": 443,
+      "uuid": {{ vless_uuid | to_json }},
+      "tls": {
+        "enabled": true,
+        "server_name": {{ dominio | to_json }},
+        "utls": { "enabled": true, "fingerprint": "chrome" }
+      },
+      "transport": { "type": "ws", "path": {{ ws_path | to_json }} }
+    },
+    { "type": "direct", "tag": "direto" }
+  ],
+
+  "route": {
+    "rules": [
+      { "action": "sniff" },
+      { "protocol": "dns", "action": "hijack-dns" },
+      { "ip_is_private": true, "outbound": "direto" },
+      { "ip_cidr": [ "{{ ip }}/32" ], "outbound": "direto" }
+    ],
+    "final": "saida",
+    "auto_detect_interface": true,
+    "default_domain_resolver": { "server": "dns-local" }
+  }
+}

@@ -1,0 +1,21 @@
+name: proxy-do-rafa-disfarce
+title: O disfarce funciona visto de fora?
+maintainer: Rafael Pagliuca dos Santos
+license: MIT
+summary: Executa, do lado de fora, as mesmas sondas que um firewall corporativo faria.
+version: 1.0.0
+supports:
+  - platform: os
+inputs:
+  - name: ip
+    type: string
+    required: true
+  - name: decoy
+    type: string
+    value: "www.microsoft.com"
+  - name: dominio
+    type: string
+    required: true
+  - name: porta_websocket
+    type: numeric
+    value: 8443

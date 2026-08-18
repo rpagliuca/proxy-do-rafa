@@ -1,0 +1,123 @@
+---
+- name: Usuario de servico do sing-box
+  ansible.builtin.user:
+    name: "{{ singbox_usuario }}"
+    system: true
+    shell: /sbin/nologin
+    home: /var/lib/sing-box
+    create_home: true
+
+- name: Baixar o sing-box
+  ansible.builtin.get_url:
+    url: "https://github.com/SagerNet/sing-box/releases/download/v{{ singbox_versao }}/sing-box-{{ singbox_versao }}-linux-arm64.tar.gz"
+    dest: "/tmp/sing-box-{{ singbox_versao }}.tar.gz"
+    checksum: "sha256:{{ singbox_sha256_arm64 }}"
+    mode: "0644"
+
+- name: Extrair o sing-box
+  ansible.builtin.unarchive:
+    src: "/tmp/sing-box-{{ singbox_versao }}.tar.gz"
+    dest: /tmp
+    remote_src: true
+    creates: "/tmp/sing-box-{{ singbox_versao }}-linux-arm64/sing-box"
+
+- name: Instalar o binario
+  ansible.builtin.copy:
+    src: "/tmp/sing-box-{{ singbox_versao }}-linux-arm64/sing-box"
+    dest: /usr/local/bin/sing-box
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Reiniciar sing-box
+
+- name: Diretorios de configuracao
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: "{{ singbox_usuario }}"
+    mode: "0750"
+  loop:
+    - "{{ singbox_diretorio }}"
+    - "{{ singbox_diretorio }}/tls"
+
+# O certificado e autoassinado e vem do SOPS, gerado UMA vez e reutilizado.
+#
+# Gerar um novo a cada `make up` funcionaria, mas obrigaria a regerar tambem a
+# configuracao de todo cliente — e o Hysteria2 fixa o certificado no cliente,
+# justamente por nao haver CA. Fixo no SOPS, so o IP muda entre viagens.
+- name: Certificado TLS da origem
+  ansible.builtin.copy:
+    content: "{{ tls_cert_pem_b64 | b64decode }}"
+    dest: "{{ singbox_diretorio }}/tls/cert.pem"
+    owner: root
+    group: "{{ singbox_usuario }}"
+    mode: "0640"
+  notify: Reiniciar sing-box
+
+- name: Chave privada TLS da origem
+  ansible.builtin.copy:
+    content: "{{ tls_key_pem_b64 | b64decode }}"
+    dest: "{{ singbox_diretorio }}/tls/key.pem"
+    owner: root
+    group: "{{ singbox_usuario }}"
+    mode: "0640"
+  no_log: true
+  notify: Reiniciar sing-box
+
+# `validate` roda `sing-box check` no arquivo NOVO antes de ele substituir o que
+# esta em uso. Sem isso, uma virgula errada no template derruba o servico e a
+# unica pista fica no journal de uma maquina que talvez ja nao seja alcancavel
+# — porque o caminho de acesso passa por ela.
+- name: Configuracao do sing-box
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ singbox_diretorio }}/config.json"
+    owner: root
+    group: "{{ singbox_usuario }}"
+    mode: "0640"
+    validate: "/usr/local/bin/sing-box check -c %s"
+  no_log: true
+  notify: Reiniciar sing-box
+
+- name: Unit do systemd
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/sing-box.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=sing-box: saida privada efemera
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      User={{ singbox_usuario }}
+      # O processo escuta na 443 sem ser root: a capacidade e concedida sozinha,
+      # em vez de dar root ao processo inteiro so por causa de uma porta baixa.
+      AmbientCapabilities=CAP_NET_BIND_SERVICE
+      CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+      NoNewPrivileges=true
+      ProtectSystem=strict
+      ProtectHome=true
+      PrivateTmp=true
+      StateDirectory=sing-box
+      ExecStart=/usr/local/bin/sing-box run -c {{ singbox_diretorio }}/config.json -D /var/lib/sing-box
+      Restart=always
+      RestartSec=5
+      LimitNOFILE=infinity
+
+      [Install]
+      WantedBy=multi-user.target
+  notify:
+    - Recarregar systemd
+    - Reiniciar sing-box
+
+- name: Habilitar e iniciar o sing-box
+  ansible.builtin.systemd_service:
+    name: sing-box
+    enabled: true
+    state: started
+    daemon_reload: true
