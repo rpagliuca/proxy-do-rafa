@@ -123,6 +123,21 @@
     "rules": [
       { "action": "sniff" },
       { "protocol": "dns", "action": "hijack-dns" },
+{#
+  A tailnet ANTES do ip_is_private. O servidor e membro do tailnet e roteia a
+  faixa 100.64.0.0/10 para dentro dela — entao, mandando essa faixa pelo tunel,
+  os aparelhos do Rafael ficam alcancaveis por IP (100.x) SEM o tailscaled local
+  precisar estar de pe.
+
+  Por que ANTES: 100.64.0.0/10 e CGNAT, e o `ip_is_private` pode classifica-la
+  como privada e desvia-la para "direto" — que a mandaria para a rede local, onde
+  ela nao existe. A regra explicita garante o caminho.
+
+  Isto e o que resolve "Tailscale na empresa": o tailscaled foge de qualquer VPN
+  por design (fwmark) e bate no bloqueio corporativo. Aqui o tailscaled local nem
+  entra — quem fala com o tailnet e o servidor, que ja escapou pela ponte.
+#}
+      { "ip_cidr": [ "100.64.0.0/10" ], "outbound": "saida" },
       { "ip_is_private": true, "outbound": "direto" },
       { "ip_cidr": [ "{{ ip }}/32", "{{ ip_da_borda }}/32" ], "outbound": "direto" }
     ],
