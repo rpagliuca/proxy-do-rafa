@@ -24,7 +24,19 @@
 # O default e o REALITY de proposito: quem chega sem SNI, com SNI do decoy, ou
 # sondando com SNI aleatorio, cai no caminho que sabe se disfarcar.
 
-load_module modules/ngx_stream_module.so;
+# ⚠️ `include`, e nao `load_module modules/ngx_stream_module.so`.
+#
+# Na Amazon Linux 2023 o nginx e compilado com --prefix=/usr/share/nginx e
+# --modules-path=/usr/lib64/nginx/modules. Caminho RELATIVO no load_module
+# resolve pelo PREFIX, entao "modules/..." vira /usr/share/nginx/modules/... —
+# que nao existe. O erro e "dlopen() failed ... No such file or directory", com
+# o pacote corretamente instalado, o que manda procurar o problema no lugar
+# errado.
+#
+# A distribuicao ja entrega /usr/share/nginx/modules/mod-stream.conf com a
+# diretiva e o caminho absoluto certos. Incluir o diretorio e o jeito da
+# distribuicao, e continua valendo se o caminho do modulo mudar num upgrade.
+include /usr/share/nginx/modules/*.conf;
 
 user nginx;
 worker_processes auto;

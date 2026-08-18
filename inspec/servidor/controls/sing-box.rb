@@ -79,7 +79,7 @@ control 'demux-01' do
 
   describe file('/etc/nginx/nginx.conf') do
     its('content') { should match(/ssl_preread on/) }
-    its('content') { should match(/load_module modules\/ngx_stream_module\.so/) }
+    its('content') { should match(%r{include /usr/share/nginx/modules/\*\.conf}) }
   end
 end
 
