@@ -14,12 +14,17 @@
     checksum: "sha256:{{ singbox_sha256_arm64 }}"
     mode: "0644"
 
+# ⚠️ ignore_errors em --check, e so em --check: o `get_url` acima nao baixa nada
+# em modo simulacao, entao esta task acha que o arquivo "nao existe" e falha.
+# Sem isto, `make check` sempre termina em erro — e um dry-run que sempre falha
+# ensina a ignorar o dry-run.
 - name: Extrair o sing-box
   ansible.builtin.unarchive:
     src: "/tmp/sing-box-{{ singbox_versao }}.tar.gz"
     dest: /tmp
     remote_src: true
     creates: "/tmp/sing-box-{{ singbox_versao }}-linux-arm64/sing-box"
+  ignore_errors: "{{ ansible_check_mode }}"
 
 - name: Instalar o binario
   ansible.builtin.copy:
@@ -29,6 +34,7 @@
     owner: root
     group: root
     mode: "0755"
+  ignore_errors: "{{ ansible_check_mode }}"
   notify: Reiniciar sing-box
 
 - name: Diretorios de configuracao
@@ -79,6 +85,7 @@
     mode: "0640"
     validate: "/usr/local/bin/sing-box check -c %s"
   no_log: true
+  ignore_errors: "{{ ansible_check_mode }}"
   notify: Reiniciar sing-box
 
 - name: Unit do systemd
