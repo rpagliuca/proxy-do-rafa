@@ -59,6 +59,13 @@ fmt:  ## formata o OpenTofu
 
 lint:  ## checagens que nao tocam a AWS
 	@tofu fmt -check -recursive -diff
-	@tofu -chdir=tofu init -backend=false -input=false >/dev/null && tofu -chdir=tofu validate
+	@# TF_DATA_DIR descartavel: sem isso o validate reaproveita o .terraform ja
+	@# inicializado contra o S3 e falha com "No valid credential sources found" —
+	@# erro de credencial numa checagem que existe justamente para nao tocar a AWS.
+	@d=$$(mktemp -d); \
+	  TF_DATA_DIR=$$d tofu -chdir=tofu init -backend=false -input=false >/dev/null && \
+	  TF_DATA_DIR=$$d TF_VAR_state_passphrase=x TF_VAR_ssh_public_key=x TF_VAR_cloudflare_zone_id=x \
+	    tofu -chdir=tofu validate; \
+	  rc=$$?; rm -rf $$d; [ $$rc -eq 0 ]
 	@for f in scripts/*.sh; do bash -n "$$f" || exit 1; done
 	@echo "ok"
