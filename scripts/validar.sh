@@ -21,12 +21,16 @@ chmod 600 "$TMP/chave_ssh"
 
 falhou=0
 
+# ⚠️ --no-create-lockfile: o repositorio e montado somente-leitura de proposito
+# (o validador nao tem por que escrever no que ele valida), e sem esta flag o
+# InSpec tenta gravar inspec.lock e morre com um backtrace de Ruby de 20 linhas
+# — "Read-only file system", que nao parece problema de flag.
 echo "==> InSpec: estado do servidor"
 docker run --rm \
   -v "$RAIZ":/repo:ro -v "$TMP":/segredos:ro \
   "$IMAGEM_INSPEC" exec /repo/inspec/servidor \
     -t "ssh://ec2-user@$IP" -i /segredos/chave_ssh --sudo \
-    --chef-license accept-silent \
+    --chef-license accept-silent --no-create-lockfile \
   || falhou=1
 
 echo
@@ -35,7 +39,7 @@ docker run --rm \
   -v "$RAIZ":/repo:ro \
   "$IMAGEM_INSPEC" exec /repo/inspec/disfarce \
     --input ip="$IP" dominio="$DOMINIO" decoy="$DECOY" \
-    --chef-license accept-silent \
+    --chef-license accept-silent --no-create-lockfile \
   || falhou=1
 
 # ⚠️ A falha do Tailscale e SILENCIOSA: o tunel funciona, so a tailnet nao. Sem
