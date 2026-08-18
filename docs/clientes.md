@@ -30,36 +30,73 @@ O tráfego para o IP do próprio servidor é excluído explicitamente (`route.ru
 
 ## Android
 
-App oficial **sing-box** (Play Store ou F-Droid).
+App oficial **sing-box** — Play Store, F-Droid ou GitHub Releases.
 
-**Caminho rápido:** `make qr` imprime o QR do link REALITY. No app:
-`+` → *Import from clipboard/QR*.
+1. Copie `clientes/gerado/cliente.json` para o celular (Google Drive, cabo, o que
+   for mais rápido).
+2. No app: **New Profile** → Type: **Local** → **Import from file** → escolha o
+   arquivo.
+3. Conecte.
 
-**Caminho completo (recomendado):** copie `clientes/gerado/cliente.json` para o
-aparelho e importe como perfil local. Só assim você tem os três caminhos e pode
-alternar entre eles quando a rede mudar.
+Use o `cliente.json`, e não o QR: o link `vless://` só carrega o caminho REALITY.
+Pelo arquivo você tem os três caminhos, a tailnet e o proxy da LAN.
 
-### Compartilhar com outros aparelhos
+**Caminho rápido, quando só quer navegar no próprio celular:** `make qr` imprime
+o QR do link REALITY, e o app importa por `+` → *Import from clipboard/QR*.
 
-O objetivo — conectar o celular à rede corporativa, ligar o túnel, e os outros
-aparelhos saírem por ele — **não funciona de forma transparente no Android sem
-root**. Quem está no tethering ignora a `VpnService`; é limitação do sistema, não
-do app.
+## Hotspot: fazer os outros aparelhos saírem por aqui
 
-O que funciona:
+**O que NÃO funciona:** ligar o hotspot e esperar que o tráfego dos aparelhos
+conectados atravesse o túnel sozinho. No Android sem root, o tráfego do
+tethering **ignora a VpnService** — é limitação do sistema, não do app. As
+soluções que fazem isso de forma transparente (VPN Hotspot e similares) **exigem
+root**.
 
-1. No app sing-box, ative **Allow connections from LAN** e anote a porta do
-   proxy misto (padrão `2080`).
-2. Ligue o hotspot do celular.
-3. Nos outros aparelhos, configure **manualmente** o proxy HTTP/SOCKS apontando
-   para o IP do celular na rede do hotspot, porta `2080`.
+**O que funciona:** a configuração de cliente traz um proxy escutando na rede
+local, com senha. Os outros aparelhos apontam para o celular explicitamente.
 
-Cada aparelho passa a sair pelo túnel — mas por configuração explícita de proxy,
-aplicação por aplicação, não por roteamento. Navegador funciona; aplicativo que
-ignora as configurações de proxy do sistema, não.
+```
+celular na rede corporativa  ──túnel──>  54.233.164.97  ──>  internet livre
+     ↑ proxy 2080 (com senha)
+     │
+  aparelhos no hotspot, com proxy manual configurado
+```
+
+### Passo a passo
+
+1. No celular, conecte o sing-box (o perfil importado acima).
+2. Ligue o hotspot.
+3. Conecte o outro aparelho ao hotspot e descubra o IP do celular naquela rede —
+   no Android costuma ser **`192.168.43.1`**. Confirme no aparelho conectado
+   (o gateway da rede é o celular).
+4. Nesse aparelho, configure **proxy HTTP manual**:
+
+   | Campo | Valor |
+   |---|---|
+   | Servidor | o IP do celular no hotspot (ex. `192.168.43.1`) |
+   | Porta | `2080` |
+   | Usuário | `rafael` |
+   | Senha | `make senha-do-proxy` |
+
+O mesmo vale sem hotspot: se o celular e o outro aparelho estiverem na **mesma
+rede Wi-Fi**, o aparelho pode usar o celular como proxy do mesmo jeito.
+
+### Por que com senha
+
+O proxy escuta em `0.0.0.0`, porque quem vai usá-lo está em outro aparelho. Sem
+senha, qualquer um na mesma rede — o Wi-Fi do hotel, a rede do escritório —
+sairia pela sua saída, **na sua conta da AWS**. A senha é gerada junto com os
+outros segredos e vive cifrada no repositório.
+
+### O limite honesto disto
+
+É proxy **explícito**, não roteamento. Navegador respeita; aplicativo que ignora
+a configuração de proxy do sistema, não. Para cobertura total no aparelho
+conectado, o caminho é instalar o sing-box nele também — o mesmo
+`cliente.json` serve em Linux, Windows, macOS, Android e iOS.
 
 Alternativa sem essa limitação: rodar o cliente no laptop e compartilhar a
-conexão do laptop.
+conexão do laptop, onde o roteamento é de verdade.
 
 ## Trocar de caminho quando a rede muda
 
