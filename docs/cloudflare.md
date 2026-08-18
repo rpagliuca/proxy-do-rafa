@@ -63,17 +63,36 @@ make segredos
 
 ```bash
 source scripts/lib.sh && eval "$(exportar_segredos)"
+T="$cloudflare_api_token"; Z="$cloudflare_zone_id"
 
-# o token é válido?
-curl -s -H "Authorization: Bearer $cloudflare_api_token" \
-  https://api.cloudflare.com/client/v4/user/tokens/verify | jq .success
+# Zone Read
+curl -s -H "Authorization: Bearer $T" \
+  "https://api.cloudflare.com/client/v4/zones/$Z" | jq -r .result.name
 
-# ele enxerga a zona certa?
-curl -s -H "Authorization: Bearer $cloudflare_api_token" \
-  "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id" | jq -r .result.name
+# Zone Settings Write — regrava o MESMO valor, entao nao muda nada
+A=$(curl -s -H "Authorization: Bearer $T" \
+  "https://api.cloudflare.com/client/v4/zones/$Z/settings/ssl" | jq -r .result.value)
+curl -s -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+  "https://api.cloudflare.com/client/v4/zones/$Z/settings/ssl" -d "{\"value\":\"$A\"}" | jq .success
+
+# DNS Write — cria e apaga um TXT de teste
+ID=$(curl -s -X POST -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+  "https://api.cloudflare.com/client/v4/zones/$Z/dns_records" \
+  -d '{"type":"TXT","name":"_proxy-do-rafa-teste","content":"permissao ok","ttl":60}' | jq -r .result.id)
+curl -s -X DELETE -H "Authorization: Bearer $T" \
+  "https://api.cloudflare.com/client/v4/zones/$Z/dns_records/$ID" | jq .result.id
 ```
 
-Deve responder `true` e `eleprograma.com.br`.
+⚠️ **Nao use `/user/tokens/verify` para conferir.** Com os tokens do formato novo
+(prefixo `cfat_`) ele responde `"Invalid API Token"` mesmo com o token
+funcionando — medido em 2026-08-18. Confira exercitando as permissoes de
+verdade, como acima: e o unico teste que corresponde ao que o `tofu apply` vai
+fazer.
+
+As tres checagens acima sao inofensivas de proposito: a de settings regrava o
+valor que ja estava la, e a de DNS apaga o que criou. Elas existem para a falha
+de permissao aparecer ANTES do apply — e nao no meio dele, com a maquina ja no
+ar e o DNS ja criado.
 
 ## Por que modo proxied (nuvem laranja)
 
