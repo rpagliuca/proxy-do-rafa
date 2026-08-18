@@ -27,8 +27,8 @@
     {
       "type": "vless",
       "tag": "vless-reality",
-      "listen": "::",
-      "listen_port": 443,
+      "listen": "127.0.0.1",
+      "listen_port": {{ demux_porta_reality }},
       "users": [
         { "name": "rafael", "uuid": {{ vless_uuid | to_json }}, "flow": "xtls-rprx-vision" }
       ],
@@ -61,8 +61,8 @@
     {
       "type": "vless",
       "tag": "vless-websocket",
-      "listen": "::",
-      "listen_port": {{ porta_origem_websocket }},
+      "listen": "127.0.0.1",
+      "listen_port": {{ demux_porta_websocket }},
       "users": [
         { "name": "rafael", "uuid": {{ vless_uuid | to_json }} }
       ],

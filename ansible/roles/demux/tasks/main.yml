@@ -1,0 +1,28 @@
+---
+- name: Instalar nginx e o modulo stream
+  ansible.builtin.dnf:
+    name:
+      - nginx
+      # ⚠️ Pacote separado na Amazon Linux 2023. Sem ele o nginx sobe, mas
+      # `load_module modules/ngx_stream_module.so` falha e a 443 fica sem dono —
+      # e a porta 443 sem dono e o servico inteiro fora do ar.
+      - nginx-mod-stream
+    state: present
+
+- name: Configuracao do nginx
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+    # `nginx -t` no arquivo novo antes de ele substituir o que esta em uso.
+    validate: "nginx -t -c %s"
+  notify: Recarregar nginx
+
+- name: Habilitar e iniciar o nginx
+  ansible.builtin.systemd_service:
+    name: nginx
+    enabled: true
+    state: started
+    daemon_reload: true

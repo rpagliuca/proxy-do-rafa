@@ -1,0 +1,10 @@
+---
+# Portas internas, compartilhadas por DUAS roles: o `sing-box` escuta nelas, o
+# `demux` encaminha para elas. Por isso vivem aqui e nao em defaults de uma role:
+# default de role nao e visivel de forma confiavel na outra, e um numero de porta
+# escrito em dois lugares e um numero de porta que vai divergir.
+#
+# Nenhuma das duas e alcancavel de fora — quem atende a internet e o nginx, na
+# 443. Ver ansible/roles/demux/templates/nginx.conf.j2.
+demux_porta_reality: 8444
+demux_porta_websocket: 8443

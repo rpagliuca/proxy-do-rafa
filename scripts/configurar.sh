@@ -56,8 +56,7 @@ cat > "$TMP/vars.json" <<JSON
   "ws_path": "$ws_path",
   "tls_cert_pem_b64": "$tls_cert_pem_b64",
   "tls_key_pem_b64": "$tls_key_pem_b64",
-  "dominio": "$(aws_exec tofu -chdir=tofu output -raw dominio)",
-  "porta_origem_websocket": 8443
+  "dominio": "$(aws_exec tofu -chdir=tofu output -raw dominio)"
 }
 JSON
 

@@ -23,30 +23,19 @@ data "aws_ssm_parameter" "al2023_arm64" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64"
 }
 
-# Faixas de IP publicas da Cloudflare, lidas na hora do apply.
-#
-# Buscar em vez de fixar: a lista muda algumas vezes por ano, e uma lista velha
-# aqui viraria "o caminho de reserva parou de funcionar" no pior momento — dentro
-# da rede fechada, sem tempo de investigar.
-data "http" "faixas_da_cloudflare" {
-  url = "https://api.cloudflare.com/client/v4/ips"
-}
-
 locals {
   etiquetas = {
     Projeto = "proxy-do-rafa"
     Gerido  = "opentofu"
     Efemero = "sim"
   }
-
-  faixas_cloudflare_ipv4 = jsondecode(data.http.faixas_da_cloudflare.response_body).result.ipv4_cidrs
 }
 
 # ─── Rede ─────────────────────────────────────────────────────────────────────
 
 resource "aws_security_group" "proxy" {
   name        = "proxy-do-rafa"
-  description = "Saida privada efemera: REALITY 443/tcp, Hysteria2 443/udp, WebSocket 8443 so da Cloudflare"
+  description = "Saida privada efemera: 443/tcp demultiplexado por SNI (REALITY e WebSocket) e 443/udp (Hysteria2)"
   vpc_id      = data.aws_vpc.default.id
 
   # 443/tcp — VLESS + XTLS-REALITY, o caminho principal.
@@ -73,18 +62,16 @@ resource "aws_security_group" "proxy" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # 8443/tcp — origem do caminho WebSocket, alcancada SO pela Cloudflare.
+  # A 8443 NAO aparece aqui, e isso e proposital.
   #
-  # O cliente nunca fala com esta porta: ele fala com a borda da Cloudflare na
-  # 443. Abrir isto ao mundo entregaria o IP de origem, que e justamente o que o
-  # modo proxied esconde.
-  ingress {
-    description = "VLESS + WebSocket, origem atras da Cloudflare"
-    from_port   = var.porta_origem_websocket
-    to_port     = var.porta_origem_websocket
-    protocol    = "tcp"
-    cidr_blocks = local.faixas_cloudflare_ipv4
-  }
+  # O caminho WebSocket vive em 127.0.0.1:8443, atras do nginx. A Cloudflare
+  # chega pela 443 como qualquer outro cliente, e o demultiplexador decide o
+  # destino pelo SNI.
+  #
+  # A tentativa anterior era abrir a 8443 para as faixas da Cloudflare. Nao
+  # funcionava: a Cloudflare encaminha para a origem NA MESMA PORTA que o
+  # cliente usou — cliente na 443, origem na 443 — entao ela nunca falava com a
+  # 8443, e a requisicao caia no REALITY e voltava 400.
 
   # SSH: so existe se admin_cidr foi preenchido. Vazio = porta 22 fechada, e o
   # acesso administrativo passa a ser por AWS Systems Manager.

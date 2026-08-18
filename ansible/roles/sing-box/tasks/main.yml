@@ -128,3 +128,12 @@
     enabled: true
     state: started
     daemon_reload: true
+
+# ⚠️ Forca os handlers AQUI, antes da role `demux`.
+#
+# Handler so roda no fim do play. Sem este flush, a sequencia seria: sing-box
+# reconfigurado mas AINDA rodando com a config velha (segurando a 443) -> nginx
+# tenta subir na 443 -> "Address already in use". A falha apareceria na role
+# errada, e depois de um `make config` a maquina ficaria sem nada atendendo.
+- name: Aplicar a nova configuracao antes de o nginx disputar a 443
+  ansible.builtin.meta: flush_handlers

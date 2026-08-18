@@ -1,0 +1,8 @@
+---
+# `reloaded` e nao `restarted`: o reload do nginx troca a configuracao sem
+# derrubar conexao estabelecida. Num servico que carrega tuneis longos, reiniciar
+# a cada `make config` seria cortar a sessao de quem esta usando.
+- name: Recarregar nginx
+  ansible.builtin.systemd_service:
+    name: nginx
+    state: reloaded

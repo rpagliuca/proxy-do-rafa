@@ -68,16 +68,3 @@ variable "dominio" {
   type        = string
   default     = "proxy-do-rafa.eleprograma.com.br"
 }
-
-variable "porta_origem_websocket" {
-  description = <<-EOT
-    Porta em que a Cloudflare fala com a origem.
-
-    8443 e nao 443 por um motivo concreto: assim a 443/tcp fica inteira para o
-    REALITY. A Cloudflare so alcanca origem HTTPS em portas de uma lista curta
-    (443, 2053, 2083, 2087, 2096, 8443) — 8443 e a unica dessa lista que nao
-    conflita.
-  EOT
-  type        = number
-  default     = 8443
-}

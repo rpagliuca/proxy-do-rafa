@@ -65,9 +65,12 @@ control 'disfarce-03' do
   impact 1.0
   title 'A porta de origem do WebSocket nao responde a quem nao e a Cloudflare'
   desc <<~DESC
-    O modo proxied so esconde o IP de origem se a origem recusar quem vem por
-    fora. Se esta porta responder daqui, o IP real esta exposto e o disfarce da
-    Cloudflare vira decoracao.
+    O caminho WebSocket vive em 127.0.0.1:8443, atras do demultiplexador. Nao ha
+    regra nenhuma para essa porta no security group.
+
+    Se ela responder daqui, alguem a exps de novo — e o WebSocket passa a ser
+    alcancavel sem passar pelo demultiplexador, com o certificado autoassinado
+    da origem visivel para quem sondar.
 
     Falha esperada: timeout ou conexao recusada.
   DESC
