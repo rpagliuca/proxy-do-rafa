@@ -60,6 +60,10 @@ cat > "$TMP/vars.json" <<JSON
 }
 JSON
 
+# "$@" e nao "${@:-}": com nenhum argumento, "${@:-}" expande para UM argumento
+# VAZIO, e o ansible-playbook recusa com `unrecognized arguments:` seguido de
+# nada — mensagem que nao aponta para lugar nenhum. "$@" expande para zero
+# argumentos, que e o que se quer, e continua seguro sob `set -u`.
 echo "==> ansible"
 construir_imagem
 docker run --rm -i \
@@ -68,4 +72,4 @@ docker run --rm -i \
   "$IMAGEM" ansible-playbook site.yml \
     --private-key /segredos/chave_ssh \
     -e @/segredos/vars.json \
-    "${@:-}"
+    "$@"
