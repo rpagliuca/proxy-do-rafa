@@ -3,6 +3,7 @@
 source "$(dirname "$0")/lib.sh"
 
 eval "$(exportar_segredos)"
+exportar_variaveis_tofu
 
 IP=$(aws_exec tofu -chdir=tofu output -raw ip_publico)
 exigir_valor "IP publico" "$IP"

@@ -81,6 +81,24 @@ exigir_valor() {
 # ➡️ A correcao de verdade e nao usar root: criar um usuario IAM dedicado com
 #    politica minima e apontar o perfil para ele. Enquanto isso nao acontece,
 #    --no-session e o que faz funcionar. Ver docs/aws.md.
+# Exporta tudo o que o OpenTofu precisa para abrir o state cifrado e falar com os
+# providers.
+#
+# ⚠️ Existe porque `make config`, `make verify` e `make qr` rodam SOZINHOS. No
+# `make up` eles herdavam as variaveis do processo pai e funcionavam; chamados
+# direto, o tofu nao conseguia nem LER o output e falhava com "Failed to request
+# input from user for variable var.state_passphrase" — que se le como problema de
+# segredo, quando e so variavel nao exportada.
+exportar_variaveis_tofu() {
+  export TF_VAR_state_passphrase="$tofu_state_passphrase"
+  export TF_VAR_ssh_public_key="$ssh_public_key"
+  export TF_VAR_cloudflare_zone_id="$cloudflare_zone_id"
+  export TF_VAR_aws_region="${REGIAO:-sa-east-1}"
+  # Credencial de provider por ambiente, nao por variavel: variavel de provider
+  # fica no state, variavel de ambiente nao.
+  export CLOUDFLARE_API_TOKEN="$cloudflare_api_token"
+}
+
 aws_exec() {
   command -v aws-vault >/dev/null || erro "aws-vault nao encontrado"
   aws-vault exec --no-session "$PERFIL_AWS" -- "$@"
