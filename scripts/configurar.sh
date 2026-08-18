@@ -7,6 +7,23 @@ eval "$(exportar_segredos)"
 IP=$(aws_exec tofu -chdir=tofu output -raw ip_publico)
 exigir_valor "IP publico" "$IP"
 
+# A auth key e cunhada AGORA, valida por 10 minutos, e morre com esta execucao.
+#
+# TAILSCALE_AUTHKEY no ambiente sobrepoe — escotilha para o dia em que a API do
+# Tailscale estiver inalcancavel da rede em que voce esta (o proprio cenario que
+# esta ferramenta existe para resolver). Nesse caso, use uma key gerada antes:
+#   TAILSCALE_AUTHKEY=tskey-auth-... make config
+TAG=$(grep '^tailscale_tag:' ansible/roles/sing-box/defaults/main.yml | awk '{print $2}' | tr -d '"')
+exigir_valor tailscale_tag "$TAG"
+if [[ -n "${TAILSCALE_AUTHKEY:-}" ]]; then
+  aviso "usando a auth key do ambiente (nao cunhada agora)"
+  AUTHKEY="$TAILSCALE_AUTHKEY"
+else
+  echo "==> cunhando auth key efemera para $TAG"
+  AUTHKEY=$(criar_authkey_efemera "$TAG")
+fi
+exigir_valor "auth key" "$AUTHKEY"
+
 mkdir -p .local && chmod 700 .local
 cat > .local/inventario.yml <<YAML
 # Gerado por scripts/configurar.sh a partir do state. Nao editar a mao:
@@ -30,7 +47,7 @@ chmod 600 "$TMP/chave_ssh"
 # vem do OpenTofu, nao dos segredos, porque quem manda neles e a infraestrutura.
 cat > "$TMP/vars.json" <<JSON
 {
-  "tailscale_authkey": "$tailscale_authkey",
+  "tailscale_authkey": "$AUTHKEY",
   "vless_uuid": "$vless_uuid",
   "reality_private_key": "$reality_private_key",
   "reality_short_id": "$reality_short_id",

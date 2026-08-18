@@ -125,21 +125,31 @@ Duas decisões que sustentam isso:
 make segredos-iniciais   # gera a chave mestra e os segredos derivados
                          # GUARDE A CHAVE: pass insert -m proxy-do-rafa/age-key < ~/.config/proxy-do-rafa/age.key
                          #                 pass git push
-make segredos            # preencher os três valores PREENCHER-*
+make segredos            # preencher os quatro valores PREENCHER-*
 make bootstrap           # cria o bucket de state (uma vez na vida)
 make up
 ```
 
-Os três valores manuais dependem de painel externo:
+Os valores manuais dependem de painel externo:
 
 | Valor | Onde obter |
 |---|---|
 | `cloudflare_api_token` | dash.cloudflare.com → perfil → API Tokens. Permissão `Zone:DNS:Edit` + `Zone:Zone:Read`, restrita a `eleprograma.com.br` |
 | `cloudflare_zone_id` | página inicial da zona no painel da Cloudflare |
-| `tailscale_authkey` | login.tailscale.com → Settings → Keys. Marcar **reusable** e **ephemeral** |
+| `tailscale_oauth_client_id` e `..._secret` | login.tailscale.com → Settings → OAuth clients. Escopos `auth_keys` (write) e `devices:core` (read), tag `tag:proxy-do-rafa` |
 
-`ephemeral` importa: sem isso, cada viagem deixa um nó `proxy-do-rafa-1`, `-2`,
-`-3` na tailnet para sempre.
+**Por que OAuth client e não uma auth key guardada aqui:** auth key do Tailscale
+expira em no máximo 90 dias, e o vencimento produz a pior falha possível — o
+túnel sobe, tudo parece certo, e a tailnet simplesmente não está lá. O OAuth
+client não expira; a auth key é cunhada a cada `make up`, de uso único, efêmera
+e válida por 10 minutos. Detalhes e a configuração da tag em
+[docs/tailscale.md](docs/tailscale.md).
+
+Também é preciso declarar a tag na policy do tailnet:
+
+```jsonc
+"tagOwners": { "tag:proxy-do-rafa": ["autogroup:admin"] }
+```
 
 ## Ferramental
 
@@ -165,6 +175,7 @@ docs/        runbook, clientes, modelo de ameaça
 
 - [docs/runbook.md](docs/runbook.md) — subir, destruir, diagnosticar
 - [docs/clientes.md](docs/clientes.md) — Linux, Android, compartilhar com outros aparelhos
+- [docs/tailscale.md](docs/tailscale.md) — como a tailnet convive com uma máquina que não dura
 - [docs/ameacas.md](docs/ameacas.md) — contra o que isto protege, e contra o que não
 
 ## Licença

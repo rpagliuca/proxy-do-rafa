@@ -82,7 +82,8 @@ tls_cert_pem_b64: "$(base64 -w0 < "$TMP/tls_cert.pem")"
 tls_key_pem_b64: "$(base64 -w0 < "$TMP/tls_key.pem")"
 cloudflare_api_token: "PREENCHER-token-da-cloudflare"
 cloudflare_zone_id: "PREENCHER-id-da-zona"
-tailscale_authkey: "PREENCHER-tskey-auth"
+tailscale_oauth_client_id: "PREENCHER-oauth-client-id"
+tailscale_oauth_client_secret: "PREENCHER-oauth-client-secret"
 YAML
 
 # Cifra com a chave publica explicita, sem depender das regras do .sops.yaml:
@@ -105,6 +106,9 @@ docker run --rm \
 # INTEIRO EM CLARO e sair com codigo 0. "Deu certo" era falso, e num repositorio
 # publico isso teria significado publicar a chave privada SSH e a do REALITY.
 chaves=$(grep -cE '^[a-z0-9_]+:' "$TMP/segredos.yaml")
+# `sops:` (metadados) nao e cifrado por desenho — e o que permite decifrar o
+# resto. O arquivo em claro nao tem essa chave, entao a contagem so bate se ela
+# for excluida do lado cifrado.
 cifrados=$(grep -cE '^[a-z0-9_]+: ENC\[AES256_GCM' "$ARQUIVO_SEGREDOS" || true)
 if [[ "$chaves" -ne "$cifrados" ]]; then
   rm -f "$ARQUIVO_SEGREDOS"
@@ -118,4 +122,4 @@ verde "conferido: $cifrados de $chaves valores cifrados"
 
 verde "segredos cifrados em $ARQUIVO_SEGREDOS"
 echo
-aviso "FALTA VOCE: preencher os tres valores PREENCHER-* com  make segredos"
+aviso "FALTA VOCE: preencher os quatro valores PREENCHER-* com  make segredos"
