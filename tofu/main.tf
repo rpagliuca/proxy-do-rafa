@@ -33,8 +33,24 @@ locals {
 
 # ─── Rede ─────────────────────────────────────────────────────────────────────
 
+# ⚠️ name_prefix + create_before_destroy, e nao `name` fixo.
+#
+# Varias mudancas neste recurso FORCAM SUBSTITUICAO — trocar a `description` e
+# a mais traicoeira, porque parece cosmetica. Sem create_before_destroy o
+# OpenTofu destroi primeiro; a AWS recusa, porque a instancia ainda usa o grupo;
+# e o apply fica RETENTANDO por 15 minutos com "Still destroying...".
+#
+# Aconteceu em 2026-08-18: um apply ficou 8 minutos preso nisso e foi
+# interrompido. Nada se perdeu — a instancia continuou no ar com o grupo antigo,
+# justamente porque a destruicao nao podia acontecer — mas o apply nao terminou,
+# e um apply interrompido no meio e a forma mais confiavel de produzir state
+# divergente.
+#
+# Com create_before_destroy o grupo novo nasce, a instancia passa a aponta-lo, e
+# so entao o antigo morre. `name` fixo impediria isso: dois grupos com o mesmo
+# nome nao coexistem, entao o prefixo e obrigatorio para o padrao funcionar.
 resource "aws_security_group" "proxy" {
-  name        = "proxy-do-rafa"
+  name_prefix = "proxy-do-rafa-"
   description = "Saida privada efemera: 443/tcp demultiplexado por SNI (REALITY e WebSocket) e 443/udp (Hysteria2)"
   vpc_id      = data.aws_vpc.default.id
 
@@ -92,6 +108,10 @@ resource "aws_security_group" "proxy" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
