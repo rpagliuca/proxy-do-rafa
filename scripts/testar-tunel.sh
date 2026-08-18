@@ -22,7 +22,7 @@ exportar_variaveis_tofu
 
 IP=$(aws_exec tofu -chdir=tofu output -raw ip_publico)
 exigir_valor "IP publico" "$IP"
-[[ -f clientes/gerado/cliente.json ]] || erro "clientes/gerado/cliente.json nao existe. Rode: make qr"
+[[ -f clientes/gerado/cliente-proxy.json ]] || erro "clientes/gerado/cliente-proxy.json nao existe. Rode: make qr"
 
 construir_imagem
 
@@ -37,7 +37,7 @@ for caminho in $CAMINHOS; do
   python3 - "$caminho" "$TMP/config.json" "$PORTA" <<'PY'
 import json, sys
 caminho, destino, porta = sys.argv[1], sys.argv[2], int(sys.argv[3])
-c = json.load(open('clientes/gerado/cliente.json'))
+c = json.load(open('clientes/gerado/cliente-proxy.json'))
 # Troca o TUN por um proxy local: TUN exige privilegio e mudaria a rota da
 # maquina inteira. O socks percorre exatamente o mesmo outbound.
 c['inbounds'] = [{"type": "mixed", "tag": "s", "listen": "0.0.0.0", "listen_port": porta}]
