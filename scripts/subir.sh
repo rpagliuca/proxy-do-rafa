@@ -26,6 +26,7 @@ else
   ADMIN_CIDR="[]"
 fi
 
+# ADMIN_CIDR e definido ACIMA e lido pelo helper. A ordem importa.
 exportar_variaveis_tofu
 
 echo "==> opentofu"

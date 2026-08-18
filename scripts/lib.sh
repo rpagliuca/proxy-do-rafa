@@ -94,6 +94,10 @@ exportar_variaveis_tofu() {
   export TF_VAR_ssh_public_key="$ssh_public_key"
   export TF_VAR_cloudflare_zone_id="$cloudflare_zone_id"
   export TF_VAR_aws_region="${REGIAO:-sa-east-1}"
+  # Fechado por padrao. Quem abre e o subir.sh, com o IP detectado na hora —
+  # os demais scripts nao mexem em regra de firewall, e um default vazio aqui
+  # garante que nenhum deles feche a porta por omissao.
+  export TF_VAR_admin_cidr="${ADMIN_CIDR:-[]}"
   # Credencial de provider por ambiente, nao por variavel: variavel de provider
   # fica no state, variavel de ambiente nao.
   export CLOUDFLARE_API_TOKEN="$cloudflare_api_token"
