@@ -10,7 +10,7 @@ SHELL := /bin/bash
 REGIAO ?= sa-east-1
 export REGIAO
 
-.PHONY: ajuda bootstrap segredos-iniciais segredos up down config check verify testar-tunel qr status orfaos fmt lint
+.PHONY: ajuda bootstrap segredos-iniciais segredos up down config check verify testar-tunel qr senha-do-proxy status orfaos fmt lint
 
 ajuda:  ## mostra esta ajuda
 	@echo "proxy-do-rafa — saida privada efemera"
@@ -50,6 +50,9 @@ testar-tunel:  ## manda trafego de verdade por cada caminho e confere de onde el
 
 qr:  ## regenera as configs de cliente e imprime o QR
 	@scripts/gerar-clientes.sh
+
+senha-do-proxy:  ## credencial do proxy da LAN, para configurar em outro aparelho
+	@scripts/senha-do-proxy.sh
 
 status:  ## o que esta no ar agora
 	@scripts/status.sh

@@ -36,6 +36,7 @@ json.dump({
     "reality_short_id": "$reality_short_id",
     "hysteria2_password": "$hysteria2_password",
     "ws_path": "$ws_path",
+    "proxy_local_senha": "$proxy_local_senha",
     "certificado": cert,
 }, open(sys.argv[2], "w"))
 PY

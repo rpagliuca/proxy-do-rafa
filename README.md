@@ -74,9 +74,11 @@ Registrado de propósito, porque descobrir isso dentro da rede fechada é caro:
   dentro (o conteúdo continua cifrado ponta a ponta se for HTTPS; se for HTTP
   puro, não).
 - **Compartilhar pelo hotspot do celular não funciona de forma transparente no
-  Android sem root.** Quem está no tethering ignora a `VpnService`. O que
-  funciona é o app expor proxy na LAN e os outros aparelhos apontarem para o
-  celular como proxy explícito — ver [docs/clientes.md](docs/clientes.md).
+  Android sem root.** O tráfego do tethering ignora a `VpnService` — limitação
+  do sistema, e as soluções transparentes exigem root. O que funciona: a
+  configuração de cliente traz um proxy **com senha** na porta 2080, e os
+  aparelhos no hotspot apontam para o celular como proxy explícito
+  (`make senha-do-proxy`). Passo a passo em [docs/clientes.md](docs/clientes.md).
 - **O endpoint Tailscale do sing-box tem defeitos abertos** de alcançabilidade
   de peers no Android/iOS. É bônus, não garantia.
 

@@ -14,6 +14,27 @@
   },
 
   "inbounds": [
+{#
+  Proxy para OUTROS aparelhos — o caso do hotspot do celular.
+
+  Escuta em 0.0.0.0 porque quem vai usa-lo esta em outro aparelho. COM SENHA
+  porque um proxy aberto numa rede de hotel ou de escritorio e um proxy aberto
+  para a rede inteira: qualquer um ali sairia pela sua saida, na sua conta da
+  AWS. A senha esta nos segredos como `proxy_local_senha`.
+
+  Comentario em Jinja, e nao um campo "comentario" no JSON: o sing-box recusa
+  campo desconhecido com `json: unknown field`, e a configuracao inteira nao
+  carrega.
+#}
+    {
+      "type": "mixed",
+      "tag": "proxy-na-lan",
+      "listen": "0.0.0.0",
+      "listen_port": 2080,
+      "users": [
+        { "username": "rafael", "password": {{ proxy_local_senha | to_json }} }
+      ]
+    },
     {
       "type": "tun",
       "tag": "tun-in",
