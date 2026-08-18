@@ -16,7 +16,7 @@
     {
       "type": "tailscale",
       "tag": "tailnet",
-      "auth_key": {{ tailscale_authkey | to_json }},
+      "auth_key": {{ tailscale_authkey_efetiva | to_json }},
       "hostname": "proxy-do-rafa",
       "accept_routes": true,
       "exit_node_allow_lan_access": true
