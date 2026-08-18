@@ -27,12 +27,15 @@ jobs:
         run: |
           set -euo pipefail
           for arquivo in secrets/*.sops.yaml; do
-            chaves=$(grep -cE '^[a-z0-9_]+:' "$arquivo")
+            # `sops:` e o bloco de metadados do proprio sops (chave age, nonce,
+            # versao). Ele NAO e cifrado por desenho — e o que permite decifrar o
+            # resto. Conta-lo como valor em claro reprova todo arquivo valido.
+            chaves=$(grep -E '^[a-z0-9_]+:' "$arquivo" | grep -vcE '^sops:')
             cifrados=$(grep -cE '^[a-z0-9_]+: ENC\[AES256_GCM' "$arquivo" || true)
             echo "$arquivo: $cifrados de $chaves valores cifrados"
             [[ "$chaves" -eq "$cifrados" ]] || { echo "::error::valor em claro em $arquivo"; exit 1; }
           done
-          if grep -rE 'BEGIN (EC |RSA |OPENSSH )?PRIVATE KEY' --include='*' . ; then
+          if grep -rE 'BEGIN (EC |RSA |OPENSSH )?PRIVATE KEY' --exclude-dir=.git . ; then
             echo "::error::chave privada em claro no repositorio"; exit 1
           fi
 
