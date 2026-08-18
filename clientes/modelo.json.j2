@@ -83,10 +83,26 @@
         "certificate": {{ certificado | to_json }}
       }
     },
+{#
+  O caminho de reserva disca um IP de borda da Cloudflare DIRETO, e nao o nome.
+
+  Medido em 2026-08-18, numa rede corporativa com NordVPN ativo: o kill-switch
+  do NordVPN recusa consultas DNS para o resolvedor da LAN
+  ("write udp ...:53: operation not permitted"), e este caminho morria antes de
+  tentar conectar — por causa do DNS, nao do bloqueio.
+
+  Pior que isso, havia circularidade: o DNS do cliente resolve ATRAVES do tunel.
+  Se o REALITY estiver bloqueado e so o WebSocket funcionar, ele precisaria do
+  tunel para descobrir o proprio endereco.
+
+  O IP e fixado na geracao (`make qr` atualiza). Qualquer IP de borda da
+  Cloudflare serve para qualquer hostname proxied: o roteamento la e por SNI e
+  por Host, nao por IP.
+#}
     {
       "type": "vless",
       "tag": "websocket",
-      "server": {{ dominio | to_json }},
+      "server": {{ ip_da_borda | to_json }},
       "server_port": 443,
       "uuid": {{ vless_uuid | to_json }},
       "tls": {
@@ -94,7 +110,11 @@
         "server_name": {{ dominio | to_json }},
         "utls": { "enabled": true, "fingerprint": "chrome" }
       },
-      "transport": { "type": "ws", "path": {{ ws_path | to_json }} }
+      "transport": {
+        "type": "ws",
+        "path": {{ ws_path | to_json }},
+        "headers": { "Host": {{ dominio | to_json }} }
+      }
     },
     { "type": "direct", "tag": "direto" }
   ],
@@ -103,8 +123,23 @@
     "rules": [
       { "action": "sniff" },
       { "protocol": "dns", "action": "hijack-dns" },
+{#
+  A tailnet ANTES do ip_is_private. O servidor e membro do tailnet e roteia a
+  faixa 100.64.0.0/10 para dentro dela — entao, mandando essa faixa pelo tunel,
+  os aparelhos do Rafael ficam alcancaveis por IP (100.x) SEM o tailscaled local
+  precisar estar de pe.
+
+  Por que ANTES: 100.64.0.0/10 e CGNAT, e o `ip_is_private` pode classifica-la
+  como privada e desvia-la para "direto" — que a mandaria para a rede local, onde
+  ela nao existe. A regra explicita garante o caminho.
+
+  Isto e o que resolve "Tailscale na empresa": o tailscaled foge de qualquer VPN
+  por design (fwmark) e bate no bloqueio corporativo. Aqui o tailscaled local nem
+  entra — quem fala com o tailnet e o servidor, que ja escapou pela ponte.
+#}
+      { "ip_cidr": [ "100.64.0.0/10" ], "outbound": "saida" },
       { "ip_is_private": true, "outbound": "direto" },
-      { "ip_cidr": [ "{{ ip }}/32" ], "outbound": "direto" }
+      { "ip_cidr": [ "{{ ip }}/32", "{{ ip_da_borda }}/32" ], "outbound": "direto" }
     ],
     "final": "saida",
     "auto_detect_interface": true,

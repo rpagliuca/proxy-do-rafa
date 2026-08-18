@@ -1,11 +1,36 @@
 # Clientes
 
-`make up` gera dois arquivos em `clientes/gerado/` (ambos fora do git):
+`make up` gera três arquivos em `clientes/gerado/` (todos fora do git):
 
 | Arquivo | O que é |
 |---|---|
-| `cliente.json` | configuração completa, com os três caminhos. É esta que se importa. |
+| `cliente-tun.json` | captura **tudo** na máquina. Precisa de root. |
+| `cliente-proxy.json` | proxy em `2080`, sem root. **Use este quando houver outra VPN ativa.** |
 | `reality.url` | link `vless://` do caminho principal, para importar por QR |
+
+## Qual dos dois: TUN ou proxy
+
+**Use o de proxy se houver outra VPN ligada** (NordVPN, VPN da empresa). A
+diferença entre os dois arquivos é uma linha, `auto_detect_interface`, e ela
+decide se funciona:
+
+- No **TUN** ela é necessária: sem ela o tráfego do próprio túnel entraria no
+  túnel, em laço.
+- No **proxy** ela quebra tudo quando existe outra VPN: amarra o socket na
+  interface física, e o kill-switch da outra VPN recusa o que sai por ali.
+
+Medido em 2026-08-18, numa rede corporativa com NordVPN ativo:
+
+```
+                 com auto_detect_interface      sem
+reality          dial tcp: i/o timeout          OK
+hysteria2        write udp: operation not       OK
+                 permitted
+```
+
+`operation not permitted` num socket UDP **não é bloqueio da rede** — é firewall
+local. Vale reconhecer esse erro: ele manda investigar o firewall corporativo
+quando o problema está na própria máquina.
 
 ## Por que o link rápido só traz o REALITY
 
