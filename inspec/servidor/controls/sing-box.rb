@@ -31,19 +31,55 @@ end
 
 control 'singbox-03' do
   impact 1.0
-  title 'As tres portas estao escutando'
-  desc 'REALITY em 443/tcp, Hysteria2 em 443/udp, WebSocket na porta de origem.'
+  title 'A 443 e do nginx; o sing-box escuta so em loopback'
+  desc <<~DESC
+    Quem atende a internet na 443/tcp e o demultiplexador, que decide pelo SNI
+    entre REALITY e WebSocket. O sing-box fica atras dele, em 127.0.0.1.
+
+    O Hysteria2 e a excecao: e UDP, o nginx nao entra no caminho, e ele escuta
+    direto na 443/udp.
+
+    Se o sing-box voltasse a escutar a 443/tcp, os dois disputariam a porta e
+    quem perdesse simplesmente nao subiria.
+  DESC
 
   describe port(443).where { protocol =~ /tcp/ } do
     it { should be_listening }
+    its('processes') { should include 'nginx' }
   end
 
   describe port(443).where { protocol =~ /udp/ } do
     it { should be_listening }
   end
 
+  describe port(8444).where { protocol =~ /tcp/ } do
+    it { should be_listening }
+    its('addresses') { should include '127.0.0.1' }
+  end
+
   describe port(porta_websocket).where { protocol =~ /tcp/ } do
     it { should be_listening }
+    its('addresses') { should include '127.0.0.1' }
+  end
+end
+
+control 'demux-01' do
+  impact 1.0
+  title 'O demultiplexador esta de pe e com a configuracao valida'
+
+  describe systemd_service('nginx') do
+    it { should be_installed }
+    it { should be_enabled }
+    it { should be_running }
+  end
+
+  describe command('nginx -t') do
+    its('exit_status') { should eq 0 }
+  end
+
+  describe file('/etc/nginx/nginx.conf') do
+    its('content') { should match(/ssl_preread on/) }
+    its('content') { should match(/load_module modules\/ngx_stream_module\.so/) }
   end
 end
 

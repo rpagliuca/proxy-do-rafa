@@ -1,0 +1,64 @@
+# Demultiplexador por SNI na porta 443.
+#
+# ─── Por que ele existe ───────────────────────────────────────────────────────
+#
+# Dois servicos precisam da 443/tcp ao mesmo tempo:
+#
+#   REALITY    — o caminho principal, que so funciona na 443 (e o disfarce)
+#   WebSocket  — o caminho de reserva, alcancado pela Cloudflare
+#
+# A tentativa anterior foi por na 8443 e mandar a Cloudflare bater la. Nao
+# funciona: a Cloudflare encaminha para a origem NA MESMA PORTA que o cliente
+# usou. Cliente na 443 -> origem na 443. A requisicao caia no REALITY, a
+# autenticacao falhava, e a Cloudflare devolvia 400.
+#
+# ─── Como funciona ────────────────────────────────────────────────────────────
+#
+# `ssl_preread` LE o SNI do ClientHello sem terminar o TLS: o handshake segue
+# intacto ate o destino. Isso e o que permite o REALITY continuar funcionando
+# atras daqui — ele depende de receber o ClientHello original, byte a byte.
+#
+#   SNI = {{ dominio }}  ->  WebSocket (127.0.0.1:{{ demux_porta_websocket }})
+#   qualquer outro SNI   ->  REALITY   (127.0.0.1:{{ demux_porta_reality }})
+#
+# O default e o REALITY de proposito: quem chega sem SNI, com SNI do decoy, ou
+# sondando com SNI aleatorio, cai no caminho que sabe se disfarcar.
+
+load_module modules/ngx_stream_module.so;
+
+user nginx;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 4096;
+}
+
+stream {
+    map $ssl_preread_server_name $destino {
+        {{ dominio }}  websocket;
+        default        reality;
+    }
+
+    upstream reality {
+        server 127.0.0.1:{{ demux_porta_reality }};
+    }
+
+    upstream websocket {
+        server 127.0.0.1:{{ demux_porta_websocket }};
+    }
+
+    server {
+        listen 0.0.0.0:443;
+        listen [::]:443;
+
+        ssl_preread on;
+        proxy_pass $destino;
+
+        # Um tunel fica aberto e ocioso por longos periodos — e uma sessao SSH
+        # esperando um comando, um WebSocket sem trafego. O padrao de 10 minutos
+        # derrubaria essas conexoes, e o sintoma seria "cai sozinho de vez em
+        # quando", que e o pior tipo de defeito para diagnosticar.
+        proxy_timeout 1h;
+    }
+}
