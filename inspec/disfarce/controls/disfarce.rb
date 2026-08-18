@@ -11,9 +11,18 @@ decoy = input('decoy')
 dominio = input('dominio')
 porta_websocket = input('porta_websocket')
 
-def s_client(destino, sni, extra = '')
-  "echo | openssl s_client -connect #{destino} -servername #{sni} " \
-  "#{extra} -verify_return_error 2>&1"
+# ⚠️ Isto e uma LAMBDA, e nao um `def`.
+#
+# Metodo definido no topo de um arquivo de controle NAO fica visivel dentro do
+# bloco `control do ... end`: o InSpec avalia o bloco no contexto de um
+# Inspec::Rule, e o erro que aparece e
+# "undefined method 's_client' for #<Inspec::Rule>", reportado como
+# "Control Source Code Error" — que parece erro de sintaxe do arquivo inteiro.
+#
+# Uma lambda guardada numa constante e capturada pelo closure e funciona.
+S_CLIENT = lambda do |destino, sni|
+  "echo | timeout 15 openssl s_client -connect #{destino} -servername #{sni} " \
+  "-verify_return_error 2>&1"
 end
 
 control 'disfarce-01' do
@@ -30,7 +39,7 @@ control 'disfarce-01' do
     identificado na rede que importa.
   DESC
 
-  describe command(s_client("#{ip}:443", decoy)) do
+  describe command(S_CLIENT.call("#{ip}:443", decoy)) do
     its('stdout') { should match(/subject=.*(microsoft|#{Regexp.escape(decoy.split('.').last(2).join('.'))})/i) }
     its('stdout') { should match(/Verify return code: 0 \(ok\)/) }
     its('stdout') { should_not match(/self.signed/i) }
@@ -47,7 +56,7 @@ control 'disfarce-02' do
     e essa diferenca e a assinatura que o bloqueio usa.
   DESC
 
-  describe command(s_client("#{ip}:443", 'exemplo-que-nao-existe.invalid')) do
+  describe command(S_CLIENT.call("#{ip}:443", 'exemplo-que-nao-existe.invalid')) do
     its('stdout') { should_not match(/proxy-do-rafa|sing-box|self.signed certificate/i) }
   end
 end
@@ -77,7 +86,7 @@ control 'disfarce-04' do
     que o caminho ate ele esta de pe.
   DESC
 
-  describe command(s_client("#{dominio}:443", dominio)) do
+  describe command(S_CLIENT.call("#{dominio}:443", dominio)) do
     its('stdout') { should match(/Verify return code: 0 \(ok\)/) }
   end
 
