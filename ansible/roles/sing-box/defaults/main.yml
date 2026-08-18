@@ -15,3 +15,10 @@ singbox_diretorio: /etc/sing-box
 # www.microsoft.com passa em praticamente toda rede corporativa, porque bloquear
 # a Microsoft quebra o Windows e o Office da propria empresa.
 singbox_decoy: "www.microsoft.com"
+
+# Tag do no na tailnet. E a tag, e nao o nome, que as ACLs devem referenciar:
+# a maquina e efemera e o nome ganha sufixo (proxy-do-rafa-1, -2) enquanto o no
+# anterior nao foi coletado. A tag e estavel por desenho.
+#
+# Precisa existir em `tagOwners` na policy do tailnet — ver docs/tailscale.md.
+tailscale_tag: "tag:proxy-do-rafa"

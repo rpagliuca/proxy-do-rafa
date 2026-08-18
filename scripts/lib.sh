@@ -61,3 +61,59 @@ aws_exec() {
   command -v aws-vault >/dev/null || erro "aws-vault nao encontrado"
   aws-vault exec "$PERFIL_AWS" -- "$@"
 }
+
+# ─── Tailscale ────────────────────────────────────────────────────────────────
+
+# Cunha uma auth key nova, valida por 10 minutos, para ESTA subida.
+#
+# ⚠️ Por que nao guardar uma auth key no SOPS, que era o desenho anterior:
+#
+#   1. Auth key do Tailscale expira em NO MAXIMO 90 dias. Passado isso, o
+#      `make up` sobe uma maquina que funciona como tunel e nao entra na tailnet
+#      — falha silenciosa, descoberta dentro da rede fechada.
+#   2. Uma key reutilizavel de 90 dias parada num repositorio publico e uma
+#      credencial de verdade, mesmo cifrada.
+#
+# O OAuth client NAO expira (so o access token, que dura 1 h e vive em memoria).
+# A key cunhada aqui e de USO UNICO, EFEMERA e valida por 10 minutos: se vazar,
+# esta morta antes de servir para alguem.
+#
+# A key sai por stdout. Ela nunca toca disco nem entra no state.
+criar_authkey_efemera() {
+  local tag="$1"
+  exigir_valor tailscale_oauth_client_id "${tailscale_oauth_client_id:-}"
+  exigir_valor tailscale_oauth_client_secret "${tailscale_oauth_client_secret:-}"
+
+  local token
+  token=$(curl -fsS -X POST https://api.tailscale.com/api/v2/oauth/token \
+    -d "client_id=${tailscale_oauth_client_id}" \
+    -d "client_secret=${tailscale_oauth_client_secret}" \
+    | jq -r '.access_token')
+  exigir_valor "access token do Tailscale" "$token"
+
+  local key
+  key=$(curl -fsS -X POST "https://api.tailscale.com/api/v2/tailnet/-/keys" \
+    -H "Authorization: Bearer ${token}" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n --arg tag "$tag" '{
+          capabilities: { devices: { create: {
+            reusable: false,
+            ephemeral: true,
+            preauthorized: true,
+            tags: [$tag]
+          } } },
+          expirySeconds: 600,
+          description: "proxy-do-rafa (efemera, cunhada no make up)"
+        }')" \
+    | jq -r '.key')
+  exigir_valor "auth key do Tailscale" "$key"
+  printf '%s' "$key"
+}
+
+# Devolve um access token da API. Usado tambem pela validacao.
+token_tailscale() {
+  curl -fsS -X POST https://api.tailscale.com/api/v2/oauth/token \
+    -d "client_id=${tailscale_oauth_client_id}" \
+    -d "client_secret=${tailscale_oauth_client_secret}" \
+    | jq -r '.access_token'
+}

@@ -82,7 +82,8 @@ tls_cert_pem_b64: "$(base64 -w0 < "$TMP/tls_cert.pem")"
 tls_key_pem_b64: "$(base64 -w0 < "$TMP/tls_key.pem")"
 cloudflare_api_token: "PREENCHER-token-da-cloudflare"
 cloudflare_zone_id: "PREENCHER-id-da-zona"
-tailscale_authkey: "PREENCHER-tskey-auth"
+tailscale_oauth_client_id: "PREENCHER-oauth-client-id"
+tailscale_oauth_client_secret: "PREENCHER-oauth-client-secret"
 YAML
 
 # Cifra com a chave publica explicita, sem depender das regras do .sops.yaml:
@@ -121,4 +122,4 @@ verde "conferido: $cifrados de $chaves valores cifrados"
 
 verde "segredos cifrados em $ARQUIVO_SEGREDOS"
 echo
-aviso "FALTA VOCE: preencher os tres valores PREENCHER-* com  make segredos"
+aviso "FALTA VOCE: preencher os quatro valores PREENCHER-* com  make segredos"

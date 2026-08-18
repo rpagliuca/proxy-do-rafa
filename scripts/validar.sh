@@ -37,6 +37,32 @@ docker run --rm \
     --chef-license accept-silent \
   || falhou=1
 
+# ⚠️ A falha do Tailscale e SILENCIOSA: o tunel funciona, so a tailnet nao. Sem
+# esta checagem, ela so apareceria quando ele tentasse alcancar outro aparelho —
+# de dentro da rede fechada, que e onde nao da para investigar nada.
+echo
+echo "==> Tailscale: o no entrou na tailnet?"
+TAG=$(grep '^tailscale_tag:' ansible/roles/sing-box/defaults/main.yml | awk '{print $2}' | tr -d '"')
+if TOKEN=$(token_tailscale 2>/dev/null) && [[ -n "$TOKEN" ]]; then
+  DISPOSITIVOS=$(curl -fsS "https://api.tailscale.com/api/v2/tailnet/-/devices" \
+    -H "Authorization: Bearer $TOKEN" 2>/dev/null || echo '{}')
+  RECENTE=$(jq -r --arg tag "$TAG" --arg limite "$(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ)" '
+    [.devices // [] | .[]
+     | select((.tags // []) | index($tag))
+     | select(.lastSeen > $limite)] | length' <<<"$DISPOSITIVOS")
+  if [[ "${RECENTE:-0}" -ge 1 ]]; then
+    verde "  no com $TAG visto na tailnet agora"
+  else
+    vermelho "  NENHUM no com $TAG visto nos ultimos 10 minutos."
+    vermelho "  O tunel deve estar funcionando; a tailnet NAO esta."
+    vermelho "  Conferir: a tag existe em tagOwners na policy? o OAuth client tem escopo auth_keys nessa tag?"
+    falhou=1
+  fi
+else
+  aviso "  nao foi possivel falar com a API do Tailscale (escopo devices:core:read no OAuth client?)"
+  aviso "  a tailnet NAO foi verificada"
+fi
+
 if [[ $falhou -ne 0 ]]; then
   vermelho "a validacao encontrou problemas — leia a saida acima ANTES de confiar nesta saida"
   exit 1
