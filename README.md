@@ -134,7 +134,7 @@ Os valores manuais dependem de painel externo:
 
 | Valor | Onde obter |
 |---|---|
-| `cloudflare_api_token` | dash.cloudflare.com → perfil → API Tokens. Permissão `Zone:DNS:Edit` + `Zone:Zone:Read`, restrita a `eleprograma.com.br` |
+| `cloudflare_api_token` | dash.cloudflare.com → perfil → API Tokens. Permissões `Zone:DNS:Edit` + **`Zone:Zone Settings:Edit`** + `Zone:Zone:Read`, restritas a `eleprograma.com.br`. Ver [docs/cloudflare.md](docs/cloudflare.md) |
 | `cloudflare_zone_id` | página inicial da zona no painel da Cloudflare |
 | `tailscale_oauth_client_id` e `..._secret` | login.tailscale.com → Settings → OAuth clients. Escopos `auth_keys` (write) e `devices:core` (read), tag `tag:proxy-do-rafa` |
 
@@ -175,6 +175,7 @@ docs/        runbook, clientes, modelo de ameaça
 
 - [docs/runbook.md](docs/runbook.md) — subir, destruir, diagnosticar
 - [docs/clientes.md](docs/clientes.md) — Linux, Android, compartilhar com outros aparelhos
+- [docs/cloudflare.md](docs/cloudflare.md) — o token (são três permissões, não duas) e o zone id
 - [docs/tailscale.md](docs/tailscale.md) — como a tailnet convive com uma máquina que não dura
 - [docs/ameacas.md](docs/ameacas.md) — contra o que isto protege, e contra o que não
 

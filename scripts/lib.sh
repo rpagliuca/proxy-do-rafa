@@ -38,15 +38,20 @@ ferramentas() {
     "$IMAGEM" "$@"
 }
 
-# Decifra os segredos e devolve `export CHAVE=valor` linha a linha.
+# Decifra os segredos e devolve `export CHAVE=valor` linha a linha, com o valor
+# CITADO por `@sh` do jq.
 #
-# Todos os valores sao de UMA linha por desenho (PEM e chave SSH vao em base64):
-# assim o formato dotenv basta, e nao e preciso um parser de YAML no meio do
-# caminho entre o segredo e o processo que o usa.
+# ⚠️ Nao usar `--output-type dotenv`: ele nao cita nada, entao um valor com
+# espaco — a chave SSH publica e o caso obvio, "ssh-ed25519 AAAA... comentario" —
+# vira `export ssh_public_key=ssh-ed25519 AAAA...` e o bash reclama de
+# "not a valid identifier" para cada pedaco. O efeito colateral e pior que o
+# erro: as variaveis SEGUINTES sao exportadas normalmente, entao o script
+# continua e so falha bem mais adiante, com a variavel vazia.
 exportar_segredos() {
   exigir_chave_mestra
   [[ -f "$ARQUIVO_SEGREDOS" ]] || erro "$ARQUIVO_SEGREDOS nao existe. Rode: make segredos-iniciais"
-  ferramentas sops -d --output-type dotenv "$ARQUIVO_SEGREDOS" | sed 's/^/export /'
+  ferramentas sops -d --output-type json "$ARQUIVO_SEGREDOS" \
+    | jq -r 'to_entries[] | select(.key != "sops") | "export \(.key)=\(.value|@sh)"'
 }
 
 # ⚠️ Falha de substituicao de comando NAO interrompe uma cadeia `&&`. Todo valor
@@ -103,7 +108,10 @@ criar_authkey_efemera() {
             tags: [$tag]
           } } },
           expirySeconds: 600,
-          description: "proxy-do-rafa (efemera, cunhada no make up)"
+          # ⚠️ Sem parenteses. A API responde 400 "description had invalid
+          # characters" — medido em 2026-08-18. O texto vai para o painel do
+          # Tailscale, entao mantenha reconhecivel e simples.
+          description: "proxy-do-rafa efemera"
         }')" \
     | jq -r '.key')
   exigir_valor "auth key do Tailscale" "$key"
