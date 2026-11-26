@@ -155,7 +155,7 @@ Também é preciso declarar a tag na policy do tailnet:
 
 ## Ferramental
 
-Nada precisa estar instalado além de `docker`, `tofu`, `aws-vault`, `jq` e `git`.
+Nada precisa estar instalado além de `docker`, `tofu`, `aws` (credencial pelo secrets-broker), `jq` e `git`.
 Ansible, SOPS, age, sing-box e InSpec vivem numa imagem com **versão e sha256
 fixados** (`ferramentas/Dockerfile`) — duas máquinas construindo em dias
 diferentes produzem a mesma ferramenta.

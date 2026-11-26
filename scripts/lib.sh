@@ -5,7 +5,7 @@ set -euo pipefail
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RAIZ"
 
-: "${PERFIL_AWS:=rafael-pessoal}"
+: "${PERFIL_AWS:=pessoal-aws-conta-pessoal-role-administracao-com-mfa}"
 : "${CHAVE_MESTRA:=$HOME/.config/proxy-do-rafa/age.key}"
 : "${IMAGEM:=proxy-do-rafa/ferramentas:1}"
 ARQUIVO_SEGREDOS="secrets/segredos.sops.yaml"
@@ -62,25 +62,10 @@ exigir_valor() {
   [[ "$valor" != PREENCHER* ]] || erro "$nome ainda esta com o valor de exemplo. Rode: make segredos"
 }
 
-# ⚠️ --no-session e OBRIGATORIO enquanto o perfil for a credencial ROOT da conta.
-#
-# A AWS proibe chamadas a IAM e STS com credencial TEMPORARIA de root — as que o
-# `aws-vault exec` cria por padrao com GetSessionToken. O sintoma nao diz isso:
-#
-#   Error: creating IAM Role (...): api error InvalidClientTokenId:
-#   The security token included in the request is invalid
-#
-# "token invalido" se le como credencial expirada ou perfil errado, e manda
-# investigar o aws-vault. Nao e nada disso: a credencial esta perfeita e a
-# operacao e que e proibida para aquele TIPO de credencial. Medido em
-# 2026-08-18: com sessao, `iam list-roles` falha; com --no-session, funciona.
-#
-# Por que dava para criar o bucket S3 antes de bater nisso: a restricao vale so
-# para IAM e STS. Metade da stack sobe, e o erro aparece no meio do apply.
-#
-# ➡️ A correcao de verdade e nao usar root: criar um usuario IAM dedicado com
-#    politica minima e apontar o perfil para ele. Enquanto isso nao acontece,
-#    --no-session e o que faz funcionar. Ver docs/aws.md.
+# Credencial da AWS: role de administracao com MFA, pelo secrets-broker (perfil
+# pessoal-aws-conta-pessoal-role-administracao-com-mfa). A chave ROOT nao e mais
+# usada: credencial temporaria de root sem MFA nao chama IAM nem STS (o erro era
+# InvalidClientTokenId no meio do apply). Ver docs/aws.md.
 # Exporta tudo o que o OpenTofu precisa para abrir o state cifrado e falar com os
 # providers.
 #
@@ -104,8 +89,8 @@ exportar_variaveis_tofu() {
 }
 
 aws_exec() {
-  command -v aws-vault >/dev/null || erro "aws-vault nao encontrado"
-  aws-vault exec --no-session "$PERFIL_AWS" -- "$@"
+  AWS_CONFIG_FILE="${AWS_CONFIG_FILE:-$HOME/.config/secrets-broker/aws-config}" \
+    AWS_PROFILE="$PERFIL_AWS" "$@"
 }
 
 # ─── Tailscale ────────────────────────────────────────────────────────────────
