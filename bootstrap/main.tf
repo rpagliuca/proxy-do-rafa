@@ -19,7 +19,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  # Sem profile fixo: rodar via `aws-vault exec rafael-pessoal -- tofu ...`.
+  # Sem profile fixo: rodar via `AWS_CONFIG_FILE=~/.config/secrets-broker/aws-config AWS_PROFILE=pessoal-aws-conta-pessoal-role-administracao-com-mfa tofu ...`.
 }
 
 variable "aws_region" {

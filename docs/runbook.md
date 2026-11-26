@@ -44,7 +44,7 @@ Se a rede bloqueia a 22 por completo, o caminho é o Systems Manager — o agent
 a permissão já estão na máquina:
 
 ```bash
-aws-vault exec rafael-pessoal -- aws ssm start-session \
+AWS_CONFIG_FILE=~/.config/secrets-broker/aws-config AWS_PROFILE=pessoal-aws-conta-pessoal-role-administracao-com-mfa aws ssm start-session \
   --region "$(tofu -chdir=tofu output -raw regiao)" \
   --target "$(tofu -chdir=tofu output -raw id_da_instancia)"
 ```
